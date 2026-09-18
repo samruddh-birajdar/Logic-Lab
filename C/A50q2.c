@@ -1,0 +1,51 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Program      : Perfect Number Checker Demo
+// Input        : 28
+// Output       : Perfect Number
+// Functions    : CheckPerfect()
+// Description  : Checks whether a given number is Perfect or not
+// Author       : Samruddh Shivkumar Birajdar
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include<stdio.h>
+
+void CheckPerfect(int num)
+{
+    if(num <= 0)
+    {
+        printf("Invalid input.\n");
+        return;
+    }
+
+    int sum = 0;
+    for(int i=1; i<=num/2; i++)
+    {
+        if(num % i == 0)
+            sum += i;
+    }
+
+    if(sum == num)
+        printf("Perfect Number\n");
+    else
+        printf("Not Perfect Number\n");
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Application : Checks Perfect number.
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int main()
+{
+    int num;
+
+    printf("Enter number : ");
+    scanf("%d",&num);
+
+    CheckPerfect(num);
+
+    return 0;
+}
