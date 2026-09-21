@@ -1,0 +1,49 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Program      : Automorphic Number Checker Demo
+// Input        : 25
+// Output       : Automorphic Number
+// Functions    : CheckAutomorphic()
+// Description  : Checks whether a given number is Automorphic or not
+// Author       : Samruddh Shivkumar Birajdar
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include<stdio.h>
+
+void CheckAutomorphic(int num)
+{
+    int sq = num * num;
+    int temp = num;
+
+    while(temp > 0)
+    {
+        if((temp % 10) != (sq % 10))
+        {
+            printf("Not Automorphic Number\n");
+            return;
+        }
+        temp /= 10;
+        sq /= 10;
+    }
+
+    printf("Automorphic Number\n");
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Application : Checks Automorphic number.
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int main()
+{
+    int num;
+
+    printf("Enter number : ");
+    scanf("%d",&num);
+
+    CheckAutomorphic(num);
+
+    return 0;
+}
