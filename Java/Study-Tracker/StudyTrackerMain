@@ -1,0 +1,525 @@
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Program      : Study Tracker 
+// Input        : Date (optional), Subject Name, Study Duration, Study Description
+// Output       : Study Logs, Search Result, CSV Export, Date Wise Summary, Subject Wise Summary
+// Functions    : InsertLog(), DisplayLog(), SearchBySubject(), DeleteLog(), ExportToCSV(),
+//                SummaryByDate(), SummaryBySubject(), LoadData(), SaveData(),
+//                ReadInt(), ReadDouble(), ReadText(), ReadDate(), main()
+// Description  : Study Tracking Application to maintain study records, persist them between runs,
+//                search / delete logs, generate reports and export logs into CSV file.
+// Author       : Samruddh Shivkumar Birajdar
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+import java.io.*;
+import java.util.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Class        : StudyLog
+// Description  : Represents a single study entry. Serializable so that it can be stored in a file.
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class StudyLog implements Serializable
+{
+    private static final long serialVersionUID = 1L;
+
+    private LocalDate Date;
+    private String Subject;
+    private double Duration;
+    private String Description;
+
+    public StudyLog(LocalDate a, String b, double c, String d)
+    {
+        this.Date = a;
+        this.Subject = b;
+        this.Duration = c;
+        this.Description = d;
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.format("%s | %-12s | %5.2f hr | %s", Date, Subject, Duration, Description);
+    }
+
+    public LocalDate getDate()
+    {
+        return this.Date;
+    }
+
+    public String getSubject()
+    {
+        return this.Subject;
+    }
+
+    public double getDuration()
+    {
+        return this.Duration;
+    }
+
+    public String getDescription()
+    {
+        return this.Description;
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Class        : StudyTracker
+// Description  : Holds all study logs and provides every operation of the application.
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+class StudyTracker
+{
+    private static final String DATA_FILE = "StudyTracker.dat";
+    private static final String LINE = "-----------------------------------------";
+
+    private ArrayList<StudyLog> Database;
+    private Scanner sobj;                       // Single shared Scanner for whole application
+
+    public StudyTracker(Scanner s)
+    {
+        this.sobj = s;
+        this.Database = new ArrayList<StudyLog>();
+        LoadData();
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Input helpers : keep asking until the user gives valid input (no more crashes on wrong input)
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public int ReadInt(String msg)
+    {
+        while(true)
+        {
+            System.out.print(msg);
+            try
+            {
+                return Integer.parseInt(sobj.nextLine().trim());
+            }
+            catch(NumberFormatException nobj)
+            {
+                System.out.println("Invalid input, please enter a whole number");
+            }
+        }
+    }
+
+    private double ReadDouble(String msg)
+    {
+        double dValue = 0.0;
+
+        while(true)
+        {
+            System.out.print(msg);
+            try
+            {
+                dValue = Double.parseDouble(sobj.nextLine().trim());
+
+                if(dValue > 0 && dValue <= 24)
+                {
+                    return dValue;
+                }
+                System.out.println("Duration must be greater than 0 and not more than 24 hours");
+            }
+            catch(NumberFormatException nobj)
+            {
+                System.out.println("Invalid input, please enter a number like 1.5");
+            }
+        }
+    }
+
+    private String ReadText(String msg)
+    {
+        String str = "";
+
+        while(true)
+        {
+            System.out.print(msg);
+            str = sobj.nextLine().trim();
+
+            if(!str.isEmpty())
+            {
+                return str;
+            }
+            System.out.println("This field cannot be empty");
+        }
+    }
+
+    private LocalDate ReadDate()
+    {
+        String str = "";
+
+        while(true)
+        {
+            System.out.print("Enter date (yyyy-mm-dd) or press Enter for today : ");
+            str = sobj.nextLine().trim();
+
+            if(str.isEmpty())
+            {
+                return LocalDate.now();
+            }
+
+            try
+            {
+                LocalDate lobj = LocalDate.parse(str);
+
+                if(lobj.isAfter(LocalDate.now()))
+                {
+                    System.out.println("Future date is not allowed");
+                }
+                else
+                {
+                    return lobj;
+                }
+            }
+            catch(DateTimeParseException dobj)
+            {
+                System.out.println("Invalid date format");
+            }
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Persistence : data is saved automatically so nothing is lost when the application is closed
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    @SuppressWarnings("unchecked")
+    private void LoadData()
+    {
+        File fobj = new File(DATA_FILE);
+
+        if(!fobj.exists())
+        {
+            return;
+        }
+
+        try(ObjectInputStream oiobj = new ObjectInputStream(new FileInputStream(fobj)))
+        {
+            Database = (ArrayList<StudyLog>) oiobj.readObject();
+            System.out.println(Database.size() + " previous log(s) loaded");
+        }
+        catch(Exception eobj)
+        {
+            System.out.println("Unable to load previous data : " + eobj.getMessage());
+        }
+    }
+
+    public void SaveData()
+    {
+        try(ObjectOutputStream ooobj = new ObjectOutputStream(new FileOutputStream(DATA_FILE)))
+        {
+            ooobj.writeObject(Database);
+        }
+        catch(IOException iobj)
+        {
+            System.out.println("Unable to save data : " + iobj.getMessage());
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Operations
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    public void InsertLog()
+    {
+        System.out.println(LINE);
+        System.out.println("---- Enter the details of your study ----");
+        System.out.println(LINE);
+
+        LocalDate lobj = ReadDate();
+        String sub = ReadText("Enter the name of subject like C/C++/Java etc : ");
+        double dur = ReadDouble("Enter the study duration in hours : ");
+        String desc = ReadText("Please provide the description of your study : ");
+
+        Database.add(new StudyLog(lobj, sub, dur, desc));
+        SaveData();
+
+        System.out.println("Study log gets inserted successfully");
+        System.out.println(LINE);
+    }
+
+    public void DisplayLog()
+    {
+        System.out.println(LINE);
+
+        if(Database.isEmpty())
+        {
+            System.out.println("Nothing to display - database is empty");
+            System.out.println(LINE);
+            return;
+        }
+
+        System.out.println("------- Study Tracker Report -------");
+        System.out.println(LINE);
+
+        int iCnt = 1;
+
+        for(StudyLog s : Database)
+        {
+            System.out.println(iCnt + " | " + s);
+            iCnt++;
+        }
+
+        System.out.println(LINE);
+    }
+
+    public void SearchBySubject()
+    {
+        System.out.println(LINE);
+
+        String key = ReadText("Enter subject to search : ");
+        int iCnt = 0;
+
+        for(StudyLog s : Database)
+        {
+            if(s.getSubject().toLowerCase().contains(key.toLowerCase()))
+            {
+                System.out.println(s);
+                iCnt++;
+            }
+        }
+
+        if(iCnt == 0)
+        {
+            System.out.println("No log found for : " + key);
+        }
+
+        System.out.println(LINE);
+    }
+
+    public void DeleteLog()
+    {
+        if(Database.isEmpty())
+        {
+            System.out.println("Nothing to delete - database is empty");
+            return;
+        }
+
+        DisplayLog();
+
+        int iNo = ReadInt("Enter log number to delete (0 to cancel) : ");
+
+        if(iNo == 0)
+        {
+            System.out.println("Delete cancelled");
+        }
+        else if(iNo < 0 || iNo > Database.size())
+        {
+            System.out.println("Invalid log number");
+        }
+        else
+        {
+            Database.remove(iNo - 1);
+            SaveData();
+            System.out.println("Study log deleted successfully");
+        }
+
+        System.out.println(LINE);
+    }
+
+    public void ExportToCSV()
+    {
+        System.out.println(LINE);
+
+        if(Database.isEmpty())
+        {
+            System.out.println("Nothing to export - database is empty");
+            System.out.println(LINE);
+            return;
+        }
+
+        String FileName = ReadText("Enter the name that you want to create for CSV file : ");
+
+        if(!FileName.toLowerCase().endsWith(".csv"))
+        {
+            FileName = FileName + ".csv";
+        }
+
+        try(PrintWriter pwobj = new PrintWriter(new FileWriter(FileName)))
+        {
+            pwobj.println("Date,Subject,Duration (hours),Description");
+
+            for(StudyLog s : Database)
+            {
+                pwobj.println(
+                    s.getDate() + "," +
+                    CsvField(s.getSubject()) + "," +
+                    s.getDuration() + "," +
+                    CsvField(s.getDescription())
+                );
+            }
+
+            System.out.println("Data gets exported to CSV successfully");
+            System.out.println("CSV File Name : " + new File(FileName).getAbsolutePath());
+        }
+        catch(IOException iobj)
+        {
+            System.out.println("Export failed : " + iobj.getMessage());
+        }
+
+        System.out.println(LINE);
+    }
+
+    // Wraps text in quotes and escapes inner quotes as per CSV rules
+    private String CsvField(String str)
+    {
+        return "\"" + str.replace("\"", "\"\"") + "\"";
+    }
+
+    public void SummaryByDate()
+    {
+        System.out.println(LINE);
+        System.out.println("Summary by Date");
+        System.out.println(LINE);
+
+        if(Database.isEmpty())
+        {
+            System.out.println("Nothing to summarise - database is empty");
+            System.out.println(LINE);
+            return;
+        }
+
+        TreeMap<LocalDate, Double> tobj = new TreeMap<LocalDate, Double>();
+        double dTotal = 0.0;
+
+        for(StudyLog s : Database)
+        {
+            tobj.merge(s.getDate(), s.getDuration(), Double::sum);
+            dTotal = dTotal + s.getDuration();
+        }
+
+        for(Map.Entry<LocalDate, Double> eobj : tobj.entrySet())
+        {
+            System.out.printf("Date : %s   Total Study Duration : %.2f hr%n", eobj.getKey(), eobj.getValue());
+        }
+
+        System.out.printf("Overall Study Duration : %.2f hr%n", dTotal);
+        System.out.println(LINE);
+    }
+
+    public void SummaryBySubject()
+    {
+        System.out.println(LINE);
+        System.out.println("Summary by Subject");
+        System.out.println(LINE);
+
+        if(Database.isEmpty())
+        {
+            System.out.println("Nothing to summarise - database is empty");
+            System.out.println(LINE);
+            return;
+        }
+
+        // Case insensitive : "java" and "Java" are treated as the same subject
+        TreeMap<String, Double> tobj = new TreeMap<String, Double>(String.CASE_INSENSITIVE_ORDER);
+        double dTotal = 0.0;
+
+        for(StudyLog s : Database)
+        {
+            tobj.merge(s.getSubject(), s.getDuration(), Double::sum);
+            dTotal = dTotal + s.getDuration();
+        }
+
+        for(Map.Entry<String, Double> eobj : tobj.entrySet())
+        {
+            System.out.printf("Subject : %-12s Total Study Duration : %.2f hr (%.1f%%)%n",
+                              eobj.getKey(), eobj.getValue(), (eobj.getValue() / dTotal) * 100);
+        }
+
+        System.out.printf("Overall Study Duration : %.2f hr%n", dTotal);
+        System.out.println(LINE);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// Application : Study Tracker Menu Driven Application.
+//
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+public class StudyTrackerMain
+{
+    public static void main(String A[])
+    {
+        int iChoice = 0;
+
+        Scanner sobj = new Scanner(System.in);
+        StudyTracker stobj = new StudyTracker(sobj);
+
+        System.out.println("-----------------------------------------");
+        System.out.println("------ Welcome to Study Tracker ---------");
+        System.out.println("-----------------------------------------");
+
+        do
+        {
+            System.out.println("-----------------------------------------");
+            System.out.println("Please select appropriate option : ");
+            System.out.println("-----------------------------------------");
+
+            System.out.println("1 : Insert new study log");
+            System.out.println("2 : View all study logs");
+            System.out.println("3 : Search study logs by subject");
+            System.out.println("4 : Delete a study log");
+            System.out.println("5 : Export study log to CSV");
+            System.out.println("6 : Summary of study log by date");
+            System.out.println("7 : Summary of study log by subject");
+            System.out.println("8 : Exit the application");
+
+            System.out.println("-----------------------------------------");
+
+            iChoice = stobj.ReadInt("Enter your choice : ");
+
+            switch(iChoice)
+            {
+                case 1:
+                    stobj.InsertLog();
+                    break;
+
+                case 2:
+                    stobj.DisplayLog();
+                    break;
+
+                case 3:
+                    stobj.SearchBySubject();
+                    break;
+
+                case 4:
+                    stobj.DeleteLog();
+                    break;
+
+                case 5:
+                    stobj.ExportToCSV();
+                    break;
+
+                case 6:
+                    stobj.SummaryByDate();
+                    break;
+
+                case 7:
+                    stobj.SummaryBySubject();
+                    break;
+
+                case 8:
+                    stobj.SaveData();
+                    break;
+
+                default:
+                    System.out.println("Please enter valid option");
+                    break;
+            }
+
+        }while(iChoice != 8);
+
+        sobj.close();
+
+        System.out.println("-----------------------------------------");
+        System.out.println("------ Thank You For Using Tracker ------");
+        System.out.println("-----------------------------------------");
+    }
+}
